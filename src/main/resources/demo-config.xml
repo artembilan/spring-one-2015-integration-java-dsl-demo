@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:int="http://www.springframework.org/schema/integration"
+	   xmlns:int-mongodb="http://www.springframework.org/schema/integration/mongodb"
+	   xmlns:int-file="http://www.springframework.org/schema/integration/file"
+	   xmlns:task="http://www.springframework.org/schema/task"
+	   xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration/mongodb http://www.springframework.org/schema/integration/mongodb/spring-integration-mongodb.xsd
+		http://www.springframework.org/schema/integration/file http://www.springframework.org/schema/integration/file/spring-integration-file.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+	<task:executor id="taskExecutor" pool-size="10"/>
+
+	<int-file:inbound-channel-adapter directory="#{new java.io.File('./src/main/resources')}"
+									  channel="processFile"
+									  filename-pattern="application.properties">
+		<int:poller fixed-delay="1000"/>
+	</int-file:inbound-channel-adapter>
+
+	<int-file:splitter input-channel="processFile" output-channel="transformData"/>
+
+	<int:channel id="transformData">
+		<int:dispatcher task-executor="taskExecutor"/>
+	</int:channel>
+
+	<int:chain input-channel="transformData" output-channel="storeData">
+		<int:transformer expression="payload.split('=')"/>
+		<int:transformer expression="{key: payload[0], value: payload[1]}"/>
+	</int:chain>
+
+	<int:publish-subscribe-channel id="storeData"/>
+
+	<int:logging-channel-adapter channel="storeData" level="INFO"/>
+
+	<int-mongodb:outbound-channel-adapter channel="storeData" collection-name="applicationProperties"/>
+
+</beans>
