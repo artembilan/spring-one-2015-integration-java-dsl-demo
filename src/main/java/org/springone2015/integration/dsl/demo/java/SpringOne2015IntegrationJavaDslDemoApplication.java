@@ -28,7 +28,7 @@ public class SpringOne2015IntegrationJavaDslDemoApplication extends IntegrationF
 		SpringApplication.run(SpringOne2015IntegrationJavaDslDemoApplication.class, args);
 	}
 
-	@Value("application.properties")
+	@Value("classpath:application.properties")
 	private File applicationProperties;
 
 	@Autowired
